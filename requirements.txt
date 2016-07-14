@@ -1,0 +1,11 @@
+ipython
+matplotlib
+numpy
+pandas
+pyyaml
+scipy
+scikit-learn
+theano
+lasagne
+xgboost
+essentia
