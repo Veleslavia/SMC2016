@@ -159,7 +159,6 @@ def train_one_net(cnn_net, train_fn, val_fn, pred_fn, X_tr, y_tr, X_val, y_val, 
         print(epoch, loss_tot, acc_tot * 100)
     pickle.dump(cnn_net, open("finetuned_net_fold{number}.plk".format(number=fold_number), "w"))
 
-    #import ipdb; ipdb.set_trace()
     p_y = predict_batch(X_val, pred_fn)
     pickle.dump(p_y, open("val_predict_fold{number}.plk".format(number=fold_number), "w"))
     pickle.dump(y_val, open("val_eval_fold{number}.plk".format(number=fold_number), "w"))

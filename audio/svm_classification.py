@@ -17,55 +17,62 @@ from utils import visualization
 # IRMAS - 30
 THRESHOLD = 20
 
-# import some data to play with
-data = pd.DataFrame.from_csv("rwc/rwc_essentia_features.csv")
+labels = None
 
-# delete underrepresented classes
+def feature_preprocessing(datafile, dataset):
 
-selective_data = data.groupby(['class'])['zcr.mean'].count()
-classes = selective_data[(selective_data > THRESHOLD)].index.values
-data = data.loc[data['class'].isin(classes.tolist())]
+    # import some data to play with
+    data = pd.DataFrame.from_csv(datafile)
 
-data = data.dropna(axis=1, how='any')
+    # delete underrepresented classes
 
-y = data['class']
-X = data.drop(['class'], axis=1).values
-X = preprocessing.Imputer().fit_transform(X)
+    selective_data = data.groupby(['class'])['zcr.mean'].count()
+    classes = selective_data[(selective_data > THRESHOLD)].index.values
+    data = data.loc[data['class'].isin(classes.tolist())]
 
-le = preprocessing.LabelEncoder()
-y = le.fit_transform(y)
+    data = data.dropna(axis=1, how='any')
 
-# IRMAS classes
-# full_classes_names = ['cello', 'clarinet', 'flute', 'guitar (acoustic)',
-#                       'guitar (electric)', 'organ', 'piano', 'saxophone',
-#                       'trumpet', 'violin', 'voice']
+    y = data['class']
+    X = data.drop(['class'], axis=1).values
+    X = preprocessing.Imputer().fit_transform(X)
 
-# RWC classes
-rwc_classes = {1: 'PIANOFORTE', 2: 'ELECTRIC PIANO ', 3: 'HARPSICHORD ', 4: 'GLOCKENSPIEL', 5: 'MARIMBA',
-               6: 'PIPE ORGAN', 7: 'ACCORDION ', 8: 'HARMONICA ', 9: 'CLASSIC GUITAR ', 10: 'UKULELE',
-               11: 'ACOUSTIC GUITAR ', 12: 'MANDOLIN', 13: 'ELECTRIC GUITAR', 14: 'ELECTRIC BASS ',
-               15: 'VIOLIN', 16: 'VIOLA', 17: 'CELLO', 18: 'CONTRABASS ', 19: 'HARP', 20: 'TIMPANI ',
-               21: 'TRUMPET', 22: 'TROMBONE', 23: 'TUBA', 24: 'HORN', 25: 'SOPRANO SAX', 26: 'ALTO SAX',
-               27: 'TENOR SAX', 28: 'BARITONE SAX', 29: 'ENGLISH HORN', 30: 'BASSOON ', 31: 'CLARINET',
-               32: 'PICCOLO', 33: 'FLUTE', 34: 'RECORDER ', 35: 'SHAKUHACHI ', 36: 'BANJO', 37: 'SHAMISEN ',
-               38: 'KOTO ', 39: 'SHO', 40: 'JAPANESE PERCUSSION', 41: 'CONCERT DRUMS ',  42: 'ROCK DRUMS ',
-               43: 'JAZZ DRUMS ', 44: 'PERCUSSION', 45: 'SOPRANO ',  46: 'ALTO ', 47: 'TENOR ',
-               48: 'BARITONE ', 49: 'BASS ', 50: 'R&B '}
-full_classes_names = [value for key, value in rwc_classes.iteritems() if key in y]
-# le2 = preprocessing.LabelEncoder()
-# le2.fit(full_classes_names)
+    if dataset == 'IRMAS':
+        # IRMAS classes
+        labels = ['cello', 'clarinet', 'flute', 'guitar (acoustic)',
+                  'guitar (electric)', 'organ', 'piano', 'saxophone',
+                  'trumpet', 'violin', 'voice']
+    elif dataset == 'RWC':
+        # RWC classes
+        rwc_classes = {1: 'PIANOFORTE', 2: 'ELECTRIC PIANO ', 3: 'HARPSICHORD ', 4: 'GLOCKENSPIEL', 5: 'MARIMBA',
+                       6: 'PIPE ORGAN', 7: 'ACCORDION ', 8: 'HARMONICA ', 9: 'CLASSIC GUITAR ', 10: 'UKULELE',
+                       11: 'ACOUSTIC GUITAR ', 12: 'MANDOLIN', 13: 'ELECTRIC GUITAR', 14: 'ELECTRIC BASS ',
+                       15: 'VIOLIN', 16: 'VIOLA', 17: 'CELLO', 18: 'CONTRABASS ', 19: 'HARP', 20: 'TIMPANI ',
+                       21: 'TRUMPET', 22: 'TROMBONE', 23: 'TUBA', 24: 'HORN', 25: 'SOPRANO SAX', 26: 'ALTO SAX',
+                       27: 'TENOR SAX', 28: 'BARITONE SAX', 29: 'ENGLISH HORN', 30: 'BASSOON ', 31: 'CLARINET',
+                       32: 'PICCOLO', 33: 'FLUTE', 34: 'RECORDER ', 35: 'SHAKUHACHI ', 36: 'BANJO', 37: 'SHAMISEN ',
+                       38: 'KOTO ', 39: 'SHO', 40: 'JAPANESE PERCUSSION', 41: 'CONCERT DRUMS ',  42: 'ROCK DRUMS ',
+                       43: 'JAZZ DRUMS ', 44: 'PERCUSSION', 45: 'SOPRANO ',  46: 'ALTO ', 47: 'TENOR ',
+                       48: 'BARITONE ', 49: 'BASS ', 50: 'R&B '}
+        labels = [value for key, value in rwc_classes.iteritems() if key in y]
 
-# ANOVA SVM-C
-# 1) anova filter, take N best ranked features
-# 2) svm
+    le = preprocessing.LabelEncoder()
+    y = le.fit_transform(y)
 
-estimators = [("scale", preprocessing.StandardScaler()),
-              ('anova_filter', SelectKBest(chi2, k=100)),
-              ('svm', svm.SVC(decision_function_shape='ovo'))]
-clf = Pipeline(estimators)
+    # le2 = preprocessing.LabelEncoder()
+    # le2.fit(full_classes_names)
+
+    # ANOVA SVM-C
+    # 1) anova filter, take N best ranked features
+    # 2) svm
+
+    estimators = [("scale", preprocessing.StandardScaler()),
+                  ('anova_filter', SelectKBest(chi2, k=100)),
+                  ('svm', svm.SVC(decision_function_shape='ovo'))]
+    clf = Pipeline(estimators)
+    return clf, X, y, labels
 
 
-def grid_search():
+def grid_search(clf, X, y):
     params = dict(anova_filter__k=[50, 100],
                   svm__kernel=['rbf'], svm__C=[0.1],
                   svm__degree=[1, 3], svm__gamma=[0.01])
@@ -95,19 +102,19 @@ def save_results(y_test, y_pred, fold_number=0):
     try:
         visualization.plot_confusion_matrix(confusion_matrix(y_test, y_pred),
                                             title="Test CM fold{number}".format(number=fold_number),
-                                            labels=full_classes_names)
+                                            labels=labels)
     except:
         pass
 
 
-def train_test():
+def train_test(clf, X, y):
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2)
     clf.fit(X_train, y_train)
     y_pred = clf.predict(X_test)
     save_results(y_test, y_pred)
 
 
-def train_evaluate_stratified():
+def train_evaluate_stratified(clf, X, y):
     skf = StratifiedKFold(y, n_folds=10)
     for fold_number, (train_index, test_index) in enumerate(skf):
         X_train, y_train = X[train_index], y[train_index]
@@ -118,4 +125,8 @@ def train_evaluate_stratified():
 
 
 if __name__ == "__main__":
-    grid_search()
+    datafile = sys.argv[1]
+    dataset = sys.argv[2]
+
+    clf, X, y, labels = feature_preprocessing(datafile, dataset)
+    grid_search(clf, X, y)
